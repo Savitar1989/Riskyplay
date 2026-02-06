@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Risk Arena</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+body { font-family: Arial; text-align: center; background: #111; color: white; }
+button { padding: 15px; font-size: 18px; margin: 10px; }
+#target {
+    width: 100px;
+    height: 100px;
+    background: red;
+    position: absolute;
+    display: none;
+}
+</style>
+</head>
+<body>
+
+<h2>Risk Arena</h2>
+<div>Balance: <span id="balance">1000</span></div>
+
+<button onclick="startGame()">Enter Arena (100)</button>
+
+<div id="target" onclick="hitTarget()"></div>
+
+<script>
+let balance = 1000;
+let multiplier = 2;
+let gameActive = false;
+
+function updateBalance() {
+    document.getElementById("balance").innerText = balance;
+}
+
+function startGame() {
+    if (balance < 100) {
+        alert("Not enough balance");
+        return;
+    }
+
+    balance -= 100;
+    updateBalance();
+
+    gameActive = true;
+    spawnTarget();
+}
+
+function spawnTarget() {
+    let target = document.getElementById("target");
+    target.style.display = "block";
+
+    target.style.left = Math.random() * 250 + "px";
+    target.style.top = Math.random() * 400 + "px";
+
+    setTimeout(() => {
+        if (gameActive) {
+            lose();
+        }
+    }, 1000);
+}
+
+function hitTarget() {
+    if (!gameActive) return;
+
+    gameActive = false;
+
+    let winAmount = 100 * multiplier;
+    balance += winAmount;
+
+    alert("WIN! +" + winAmount);
+    document.getElementById("target").style.display = "none";
+    updateBalance();
+}
+
+function lose() {
+    gameActive = false;
+    document.getElementById("target").style.display = "none";
+    alert("You lost!");
+}
+
+updateBalance();
+</script>
+
+</body>
+</html>
