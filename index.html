@@ -2,265 +2,172 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>RiskPlay Pro</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>RiskPlay Phaser</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
 <style>
-body{
+body {
     margin:0;
-    font-family:Arial;
-    background:radial-gradient(circle at top,#1b0033,#000);
-    color:white;
-    text-align:center;
-    overflow:hidden;
-}
-h1{margin:10px;font-size:26px;}
-
-.panel{
-    background:#1c1c3c;
-    margin:10px;
-    padding:15px;
-    border-radius:15px;
-    box-shadow:0 0 25px #8a2be288;
-}
-
-button{
-    padding:12px 20px;
-    border:none;
-    border-radius:12px;
-    background:linear-gradient(45deg,#00f2ff,#8a2be2);
-    color:white;
-    font-size:16px;
-    cursor:pointer;
-}
-
-.slot-container{
-    display:flex;
-    justify-content:center;
-    gap:10px;
-    margin:15px;
-}
-
-.reel{
-    width:70px;
-    height:70px;
-    background:#000;
-    border:2px solid #00f2ff;
-    border-radius:10px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:35px;
-    box-shadow:0 0 15px #00f2ff66;
-}
-
-.win-popup{
-    position:absolute;
-    top:40%;
-    width:100%;
-    font-size:32px;
-    font-weight:bold;
-    animation:pop 1s ease forwards;
-    text-shadow:0 0 15px gold;
-}
-
-@keyframes pop{
-    0%{transform:scale(0.5);opacity:0;}
-    50%{transform:scale(1.3);}
-    100%{transform:scale(1);opacity:1;}
-}
-
-canvas{
-    background:black;
-    border-radius:10px;
-    margin-top:10px;
-}
-
-.hidden{display:none;}
-
-.timebar{
-    height:10px;
-    background:lime;
-    margin:5px auto;
-    width:300px;
+    background:#0d0221;
 }
 </style>
 </head>
 <body>
 
-<h1>🎰 RiskPlay Pro</h1>
-
-<div class="panel">
-Balance: <span id="balance">1000</span> |
-Tickets: <span id="tickets">0</span>
-</div>
-
-<div class="panel">
-<div class="slot-container">
-<div class="reel" id="r1">❓</div>
-<div class="reel" id="r2">❓</div>
-<div class="reel" id="r3">❓</div>
-</div>
-<button onclick="spin()">Spin (50)</button>
-</div>
-
-<div class="panel">
-<button onclick="startArena()">Enter Arena (1 Ticket)</button>
-<div id="arenaContainer" class="hidden">
-<div class="timebar" id="timebar"></div>
-<canvas id="arena" width="300" height="400"></canvas>
-<div>Score: <span id="score">0</span> | Combo: <span id="combo">0</span></div>
-</div>
-</div>
-
 <script>
-let balance=1000;
-let tickets=0;
-let symbols=["💰","⚡","🎟","⭐","💎"];
+let balance = 1000;
+let tickets = 0;
 
-function updateUI(){
-    document.getElementById("balance").innerText=balance;
-    document.getElementById("tickets").innerText=tickets;
+class SlotScene extends Phaser.Scene {
+    constructor() { super("SlotScene"); }
+
+    create() {
+        this.add.text(20,20,"Balance: "+balance,{fontSize:"20px",color:"#00f2ff"});
+        this.balanceText = this.add.text(20,20,"Balance: "+balance,{fontSize:"20px",color:"#00f2ff"});
+
+        this.ticketText = this.add.text(20,50,"Tickets: "+tickets,{fontSize:"20px",color:"#8a2be2"});
+
+        this.reels = [];
+        for(let i=0;i<3;i++){
+            let reel = this.add.text(200+i*100,200,"❓",{fontSize:"60px"});
+            this.reels.push(reel);
+        }
+
+        let spinBtn = this.add.text(250,350,"SPIN (50)",{
+            fontSize:"28px",
+            backgroundColor:"#00f2ff",
+            padding:10
+        }).setInteractive();
+
+        spinBtn.on("pointerdown",()=>this.spin());
+
+        let arenaBtn = this.add.text(250,420,"GO ARENA",{
+            fontSize:"24px",
+            backgroundColor:"#8a2be2",
+            padding:10
+        }).setInteractive();
+
+        arenaBtn.on("pointerdown",()=>{
+            this.scene.start("ArenaScene");
+        });
+    }
+
+    spin(){
+        if(balance<50) return;
+
+        balance-=50;
+
+        let symbols=["💰","⚡","🎟","💎","⭐"];
+        this.reels.forEach((reel,i)=>{
+            this.tweens.add({
+                targets:reel,
+                y: 300,
+                duration:300,
+                yoyo:true,
+                repeat:5,
+                onComplete:()=>{
+                    let sym=symbols[Math.floor(Math.random()*symbols.length)];
+                    reel.setText(sym);
+
+                    if(sym==="💰") balance+=100;
+                    if(sym==="⚡") balance+=50;
+                    if(sym==="🎟") tickets+=1;
+                    if(sym==="💎") balance+=500;
+                    if(sym==="⭐") balance+=200;
+
+                    this.balanceText.setText("Balance: "+balance);
+                    this.ticketText.setText("Tickets: "+tickets);
+                }
+            });
+        });
+    }
 }
 
-function spin(){
-    if(balance<50){alert("No balance");return;}
-    balance-=50;
-    updateUI();
+class ArenaScene extends Phaser.Scene {
+    constructor(){ super("ArenaScene"); }
 
-    let reels=[r1,r2,r3];
-    reels.forEach(r=>{
-        let spins=15+Math.random()*10;
-        let interval=setInterval(()=>{
-            r.innerText=symbols[Math.floor(Math.random()*symbols.length)];
-            spins--;
-            if(spins<=0) clearInterval(interval);
-        },80);
-    });
+    create(){
+        this.score=0;
+        this.timeLeft=20;
 
-    setTimeout(()=>{
-        let results=reels.map(r=>r.innerText);
-        let win=0;
+        this.add.text(20,20,"Arena Mode",{fontSize:"24px",color:"#00f2ff"});
 
-        results.forEach(sym=>{
-            if(sym==="💰") win+=100;
-            if(sym==="⚡") win+=50;
-            if(sym==="🎟") tickets+=1;
-            if(sym==="⭐") win+=200;
-            if(sym==="💎") win+=500;
+        this.scoreText=this.add.text(20,60,"Score: 0",{fontSize:"20px"});
+        this.timeText=this.add.text(20,90,"Time: 20",{fontSize:"20px"});
+
+        if(tickets<1){
+            this.add.text(200,300,"NO TICKET!",{fontSize:"32px",color:"red"});
+            return;
+        }
+
+        tickets--;
+
+        this.target=this.add.circle(400,300,30,0xff0000);
+        this.head=this.add.circle(400,300,10,0xffff00);
+
+        this.target.setInteractive();
+
+        this.target.on("pointerdown",(pointer)=>{
+            let dist = Phaser.Math.Distance.Between(pointer.x,pointer.y,this.target.x,this.target.y);
+
+            let points = dist<10?2:1;
+            this.score+=points;
+            this.scoreText.setText("Score: "+this.score);
+
+            this.spawnTarget();
         });
 
-        balance+=win;
-        updateUI();
+        this.spawnTarget();
 
-        if(win>=500) showPopup("🔥 JACKPOT 🔥");
-        else if(win>=200) showPopup("💥 BIG WIN 💥");
-        else if(win>0) showPopup("WIN +" + win);
-    },1500);
-}
+        this.timeEvent=this.time.addEvent({
+            delay:1000,
+            callback:()=>{
+                this.timeLeft--;
+                this.timeText.setText("Time: "+this.timeLeft);
+                if(this.timeLeft<=0){
+                    this.endGame();
+                }
+            },
+            loop:true
+        });
 
-function showPopup(text){
-    let div=document.createElement("div");
-    div.className="win-popup";
-    div.innerText=text;
-    document.body.appendChild(div);
-    setTimeout(()=>div.remove(),1000);
-}
-
-//////////////////// ARENA /////////////////////
-
-let canvas=document.getElementById("arena");
-let ctx=canvas.getContext("2d");
-let score=0;
-let combo=0;
-let timeLeft=20;
-let target;
-
-function startArena(){
-    if(tickets<1){alert("No ticket");return;}
-    tickets--;
-    updateUI();
-
-    document.getElementById("arenaContainer").classList.remove("hidden");
-
-    score=0;
-    combo=0;
-    timeLeft=20;
-
-    spawnTarget();
-
-    let timer=setInterval(()=>{
-        timeLeft--;
-        document.getElementById("timebar").style.width=(timeLeft/20*300)+"px";
-        if(timeLeft<=0){
-            clearInterval(timer);
-            endArena();
-        }
-    },1000);
-}
-
-function spawnTarget(){
-    target={
-        x:Math.random()*260+20,
-        y:Math.random()*360+20,
-        r:25,
-        vx:(Math.random()-0.5)*4,
-        vy:(Math.random()-0.5)*4
-    };
-}
-
-canvas.addEventListener("click",function(e){
-    let rect=canvas.getBoundingClientRect();
-    let mx=e.clientX-rect.left;
-    let my=e.clientY-rect.top;
-
-    let dist=Math.sqrt((mx-target.x)**2+(my-target.y)**2);
-
-    if(dist<target.r){
-        let headshot=dist<10;
-        let points=headshot?2:1;
-
-        score+=points;
-        combo++;
-        document.getElementById("score").innerText=score;
-        document.getElementById("combo").innerText=combo;
-
-        spawnTarget();
-    } else {
-        combo=0;
-        document.getElementById("combo").innerText=combo;
+        let backBtn=this.add.text(20,550,"BACK",{fontSize:"20px",backgroundColor:"#8a2be2"}).setInteractive();
+        backBtn.on("pointerdown",()=>this.scene.start("SlotScene"));
     }
-});
 
-function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    spawnTarget(){
+        let x=Phaser.Math.Between(200,600);
+        let y=Phaser.Math.Between(150,450);
 
-    target.x+=target.vx;
-    target.y+=target.vy;
+        this.tweens.add({
+            targets:this.target,
+            x:x,
+            y:y,
+            duration:300
+        });
 
-    if(target.x<20||target.x>280) target.vx*=-1;
-    if(target.y<20||target.y>380) target.vy*=-1;
+        this.tweens.add({
+            targets:this.head,
+            x:x,
+            y:y,
+            duration:300
+        });
+    }
 
-    ctx.beginPath();
-    ctx.arc(target.x,target.y,target.r,0,Math.PI*2);
-    ctx.fillStyle="red";
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(target.x,target.y,10,0,Math.PI*2);
-    ctx.fillStyle="yellow";
-    ctx.fill();
-
-    requestAnimationFrame(draw);
+    endGame(){
+        balance+=this.score*40;
+        this.scene.start("SlotScene");
+    }
 }
 
-spawnTarget();
-draw();
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    backgroundColor:"#0d0221",
+    scene:[SlotScene,ArenaScene]
+};
 
-function endArena(){
-    showPopup("Arena Finished!");
-    balance+=score*40;
-    updateUI();
-}
+new Phaser.Game(config);
 </script>
 
 </body>
